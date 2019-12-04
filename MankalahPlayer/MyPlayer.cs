@@ -95,7 +95,7 @@ namespace Mankalah
 
         }
 
-        public override int evaluate(Board b)
+        public override int evaluate(Board b) 
         {
             if (this.position == Position.Bottom)
             {
