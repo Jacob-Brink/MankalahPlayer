@@ -3,13 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using Mankalah;
 
 namespace Mankalah
 {
+    
     // rename me
     public class MyPlayer : Player // class must be public
     {
+
+        private const int bottomGoal = 6;
+        private const int topGoal = 13;
+        private int maxTime;
+        private CancellationTokenSource cancellationToken;
 
         public class DataWrapper
         {
@@ -39,6 +46,7 @@ namespace Mankalah
             : base(pos, "LeBrink", maxTimePerMove) // choose a string other than "MyPlayer"
         {
             this.position = pos;
+            this.maxTime = maxTimePerMove;
         }
 
         public override string getImage()
@@ -59,6 +67,10 @@ namespace Mankalah
 
         public DataWrapper minimaxVal(Board b, int d)
         {
+
+            if (cancellationToken.IsCancellationRequested)
+                throw new OperationCanceledException();
+
             if (b.gameOver() || d == 0)
                 return new DataWrapper(0, evaluate(b));
 
@@ -99,21 +111,34 @@ namespace Mankalah
         {
             if (this.position == Position.Bottom)
             {
-                return b.stonesAt(6)-b.stonesAt(13);
+                return b.stonesAt(bottomGoal)-b.stonesAt(topGoal);
             }
             else
             {
-                return b.stonesAt(13)-b.stonesAt(6);
+                return b.stonesAt(topGoal)-b.stonesAt(bottomGoal);
             }
             
         }
+
+        private 
 
         private int count = 0;
 
         public override int chooseMove(Board b)
         {
-            DataWrapper data = minimaxVal(b, 16);
-            return data.getMove();
+            cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(maxTime));
+           
+            var depth = 9;
+            int bestMove = minimaxVal(b, depth).getMove();
+            depth++;
+            try {
+                while (true) {
+                    bestMove = minimaxVal(b, depth).getMove();
+                    depth++;
+                }
+            } catch (OperationCanceledException e) {
+                return bestMove;
+            }
         }
 
     }
