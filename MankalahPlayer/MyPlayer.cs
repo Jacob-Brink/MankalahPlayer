@@ -66,7 +66,7 @@ namespace Mankalah
         private WeightsPackage weightsPackage;
 
         public MyPlayer(Position pos, int maxTimePerMove) // constructor must match this signature
-            : base(pos, "LeBrink", maxTimePerMove) // choose a string other than "MyPlayer"
+            : base(pos, "Pruning With Dynamic Row Strategy Based on Turn Count > 10", maxTimePerMove) // choose a string other than "MyPlayer"
         {
             this.position = pos;
             this.maxTime = maxTimePerMove;
@@ -116,11 +116,11 @@ namespace Mankalah
             {
                 if (b.legalMove(move))
                 {
-
+                    
                     Board newBoard = new Board(b);
                     newBoard.makeMove(move, false);//test
                     data = minimaxVal(newBoard, d - 1, alpha, beta);
-
+                    
                     if (b.whoseMove() == this.position)
                     {
                         alpha = Math.Max(alpha, data.getValue());
@@ -130,14 +130,15 @@ namespace Mankalah
                         beta = Math.Min(beta, data.getValue());
                     }
 
-                    if (alpha >= beta)
-                        break;
+                   
 
                     if (isBetterMove(b.whoseMove(), bestValue, data.getValue()))
                     {
                         bestValue = data.getValue();
                         bestMove = move;
                     }
+                    if (alpha >= beta)
+                        break;
                 }
             }
 
@@ -145,21 +146,33 @@ namespace Mankalah
 
         }
 
-        public double pointsOnMyTop(Board b)//asdf
+        public double pointsOnMyTop(Board b)
         {
             int bottomPoints = 0;
+            int bottomMin = int.MaxValue;
+            int bottomMax = 0;
             for (int pos = 0; pos <= 5; pos++)
             {
                 bottomPoints += b.stonesAt(pos);
+                if (b.stonesAt(pos) < bottomMin)
+                    bottomMin = b.stonesAt(pos);
+                if (b.stonesAt(pos) > bottomMax)
+                    bottomMax = b.stonesAt(pos);
             }
 
             int topPoints = 0;
+            int topMin = int.MaxValue;
+            int topMax = int.MaxValue;
             for (int pos = 7; pos <= 12; pos++)
             {
                 topPoints += b.stonesAt(pos);
+                if (b.stonesAt(pos) < topMin)
+                    topMin = b.stonesAt(pos);
+                if (b.stonesAt(pos) > topMax)
+                    topMax = b.stonesAt(pos);
             }
 
-            return (topPoints - bottomPoints);
+            return (topMin - topMax)- (bottomMin - bottomMax);
         }
 
         public double capturesForTop(Board b)
@@ -227,11 +240,11 @@ namespace Mankalah
 
         public int calculationTopValue(Board b)
         {
-            int evaluation = (int) (capturesForTop(b)*5 + 10 * topCala(b) + (b.stonesAt(topGoal) + b.stonesAt(bottomGoal))*pointsOnMyTop(b));
-            Console.WriteLine("top Cala" + topCala(b));
-            Console.WriteLine("top Cala * 10000 cast" + (int)(10000 * topCala(b)));
-            return
-               evaluation;
+            int evaluation = 0;
+            evaluation += (int) (200 * topCala(b));// + (int) (50 * capturesForTop(b));//
+            /*if (turnCount > 10000)
+                evaluation += (int) (50 * pointsOnMyTop(b));*/// + (b.stonesAt(topGoal) + b.stonesAt(bottomGoal))*pointsOnMyTop(b)+40*capturesForTop(b));
+            return evaluation;
             //weightsPackage.weight1 * topCala(b) + weightsPackage.weight2 * moveAgainsTop(b) +
             // weightsPackage.weight3 * capturesForTop(b)));// + weightsPackage.weight4 * pointsOnMyTop(b)));
         }
@@ -249,8 +262,7 @@ namespace Mankalah
 
         }
 
-        public override int chooseMove(Board b)
-        {
+        public override int chooseMove(Board b) { 
             cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(maxTime));
             var depth = 1;
             int bestMove = minimaxVal(b, depth, int.MinValue, int.MaxValue).getMove();
