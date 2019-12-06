@@ -145,7 +145,7 @@ namespace Mankalah
 
         }
 
-        public double pointsOnMyTop(Board b)
+        public double pointsOnMyTop(Board b)//asdf
         {
             int bottomPoints = 0;
             for (int pos = 0; pos <= 5; pos++)
