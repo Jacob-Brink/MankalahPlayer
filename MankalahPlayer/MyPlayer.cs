@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -9,7 +10,7 @@ using Mankalah;
 
 namespace Mankalah
 {
-    
+
     // rename me
     public class MyPlayer : Player // class must be public
     {
@@ -20,7 +21,7 @@ namespace Mankalah
         private int turnCount = 0;
         private CancellationTokenSource cancellationToken;
 
-        private double w1, w2, w3, w4;
+
 
         public class DataWrapper
         {
@@ -44,17 +45,32 @@ namespace Mankalah
 
         }
 
+        public class WeightsPackage
+        {
+            public double weight1 { get; }
+            public double weight2 { get; }
+            public double weight3 { get; }
+            public double weight4 { get; }
+
+            public WeightsPackage(double w1, double w2, double w3, double w4)
+            {
+                weight1 = w1;
+                weight2 = w2;
+                weight3 = w3;
+                weight4 = w4;
+            }
+
+        }
+
         private Position position;
+        private WeightsPackage weightsPackage;
 
         public MyPlayer(Position pos, int maxTimePerMove) // constructor must match this signature
             : base(pos, "LeBrink", maxTimePerMove) // choose a string other than "MyPlayer"
         {
             this.position = pos;
             this.maxTime = maxTimePerMove;
-            w1 = .6;
-            w2 = 0;
-            w3 = 0;
-            w4 = .4;
+            //this.weightsPackage = weightsPackage;
         }
 
         public override string getImage()
@@ -64,7 +80,7 @@ namespace Mankalah
 
         public bool isBetterMove(Position currentPosition, int bestValue, int currentValue)
         {
-            if (bestValue == -1)
+            if (bestValue == int.MinValue)
                 return true;
 
             if (currentPosition == this.position)
@@ -93,7 +109,7 @@ namespace Mankalah
                 end = 12;
             }
 
-            int bestValue = -1;
+            int bestValue = int.MinValue;
             int bestMove = -1;
 
             for (int move = start; move <= end; move++)
@@ -102,9 +118,9 @@ namespace Mankalah
                 {
 
                     Board newBoard = new Board(b);
-                    newBoard.makeMove(move, true);//test
+                    newBoard.makeMove(move, false);//test
                     data = minimaxVal(newBoard, d - 1, alpha, beta);
-                    
+
                     if (b.whoseMove() == this.position)
                     {
                         alpha = Math.Max(alpha, data.getValue());
@@ -143,7 +159,7 @@ namespace Mankalah
                 topPoints += b.stonesAt(pos);
             }
 
-            return (topPoints - bottomPoints) / 12.0;
+            return (topPoints - bottomPoints);
         }
 
         public double capturesForTop(Board b)
@@ -177,29 +193,26 @@ namespace Mankalah
                     }
                 }
             }
-            //todo
-            return (topCaptures - bottomCaptures)/24.0;
+            return (topCaptures - bottomCaptures);
         }
 
         public double moveAgainsTop(Board b)
         {
             int top = 0;
-            for (int pos = 0; pos <= 5; pos++)
+            for (int pos = 12; pos >= 7; pos--)
             {
                 if (b.stonesAt(pos) == topGoal - pos)
                 {
-                    top = 1;
-                    break;
+                    top += 1;
                 }
             }
 
             int bottom = 0;
-            for (int pos = 7; pos <= 12; pos++)
+            for (int pos = 5; pos >= 0; pos--)
             {
                 if (b.stonesAt(pos) == bottomGoal - pos)
                 {
-                    bottom = 1;
-                    break;
+                    bottom += 1;
                 }
             }
 
@@ -209,15 +222,21 @@ namespace Mankalah
 
         public double topCala(Board b)
         {
-            return (b.stonesAt(topGoal) - b.stonesAt(bottomGoal))/46.0;
+            return (b.stonesAt(topGoal) - b.stonesAt(bottomGoal));
         }
 
         public int calculationTopValue(Board b)
         {
-            return (int)(10000 * (w1 * topCala(b) + w2 * moveAgainsTop(b) + w3 * capturesForTop(b) + w4 * pointsOnMyTop(b)));
+            int evaluation = (int) (capturesForTop(b)*5 + 10 * topCala(b) + (b.stonesAt(topGoal) + b.stonesAt(bottomGoal))*pointsOnMyTop(b));
+            Console.WriteLine("top Cala" + topCala(b));
+            Console.WriteLine("top Cala * 10000 cast" + (int)(10000 * topCala(b)));
+            return
+               evaluation;
+            //weightsPackage.weight1 * topCala(b) + weightsPackage.weight2 * moveAgainsTop(b) +
+            // weightsPackage.weight3 * capturesForTop(b)));// + weightsPackage.weight4 * pointsOnMyTop(b)));
         }
 
-        public override int evaluate(Board b) 
+        public override int evaluate(Board b)
         {
             if (this.position == Position.Top)
             {
@@ -225,28 +244,32 @@ namespace Mankalah
             }
             else
             {
-                return -1* calculationTopValue(b);
+                return -1 * calculationTopValue(b);
             }
-            
+
         }
 
         public override int chooseMove(Board b)
         {
             cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(maxTime));
-            turnCount++;
-            var depth = 8;
+            var depth = 1;
             int bestMove = minimaxVal(b, depth, int.MinValue, int.MaxValue).getMove();
+            turnCount++;
             depth++;
-            try {
-                while (true) {
+            try
+            {
+                while (true)
+                {
                     bestMove = minimaxVal(b, depth, int.MinValue, int.MaxValue).getMove();
                     depth++;
                 }
-            } catch (OperationCanceledException e)
+            }
+            catch (OperationCanceledException e)
             {
+                Console.WriteLine(depth);
                 return bestMove;
             }
-            
+
         }
 
     }
